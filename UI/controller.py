@@ -8,58 +8,37 @@ class Controller:
         # the model, which implements the logic of the program and holds the data
         self._model = model
 
-    #--------------------------------------------------------------------------------------------------------------------------------------------
-    def fillDDYear(self):
+    def fillDDGene(self):
 
-        anni = self._model.getAllAnni()
-        for a in anni:
-            self._view._ddAnno.options.append( ft.dropdown.Option(a) )
+        gene = self._model.getAllNodes()
+        for g in gene:
+            self._view.ddGene.options.append( ft.dropdown.Option( g.GeneID ))
 
-    # --------------------------------------------------------------------------------------------------------------------------------------------
-    def handleCreaGrafo(self,e):
+    def handleCreaGrafo(self, e):
 
-        anno = self._view._ddAnno.value
-
-        if anno == "":
-            self._view.txt_result.controls.clear()
-            self._view.txt_result.controls.append( ft.Text(f"Attenzione, inserire un anno per continuare!"))
-            self._view.update_page()
-            return
-
-        self._model.buildGraph(anno)
+        self._model.buildGraph()
+        self.fillDDGene()
         numNodi, numArchi = self._model.getDetailsGraph()
-        bestPilota, bestScore = self._model.getBestScore()
-        self._view.txt_result.controls.clear()
-        self._view.txt_result.controls.append(ft.Text(f"Grafo correttamente creato: "))
-        self._view.txt_result.controls.append(ft.Text(f"Numero di nodi: {numNodi} \nNumero di archi: {numArchi}"))
-        self._view.txt_result.controls.append(ft.Text(f"Best driver: {bestPilota} with score: {bestScore} "))
+
+        self._view.txtOut.controls.clear()
+        self._view.txtOut.controls.append( ft.Text(f"Grafo creato con {numNodi} vertici e {numArchi} archi.") )
         self._view.update_page()
 
-    # --------------------------------------------------------------------------------------------------------------------------------------------
-    def handleCerca(self, e):
 
-        numPiloti = self._view._txtIntK.value
+    def handleGeniAdiacenti(self, e):
 
-        if numPiloti == "":
-            self._view.txt_result.controls.clear()
-            self._view.txt_result.controls.append( ft.Text(f"Attenzione, inserire un numero min di piloti per continuare!"))
+        idNodo = self._view.ddGene.value
+
+        if idNodo == "":
+            self._view.txtOut.controls.clear()
+            self._view.txtOut.controls.append( ft.Text(f"Attenzione, inserire un gene per continuare!", color="red") )
             self._view.update_page()
             return
 
-        try:
-            numPilotiInt = int(numPiloti)
-        except ValueError:
-            self._view.txt_result.controls.clear()
-            self._view.txt_result.controls.append( ft.Text(f"Attenzione, inserire un numero intero per continuare!"))
-            self._view.update_page()
-            return
-
-        bestPath, bestScore = self._model.getDreamTeam(numPiloti)
-        self._view.txt_result.controls.append(ft.Text(f"Dream Team trovato!"))
-        self._view.txt_result.controls.append(ft.Text(f"Dream Team composto da: {numPilotiInt} ha tasso di sconfitta: {bestScore}"))
-        for p in bestPath:
-            self._view.txt_result.controls.append( ft.Text(p))
+        lista = self._model.getAdiacenti(idNodo)
+        self._view.txtOut.controls.append(ft.Text(f"Geni adiacenti a: {idNodo}"))
+        for t in lista:
+            self._view.txtOut.controls.append(ft.Text(f"{t[0]} - {t[1]}"))
 
         self._view.update_page()
-    # --------------------------------------------------------------------------------------------------------------------------------------------
 

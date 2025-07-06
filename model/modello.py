@@ -1,5 +1,3 @@
-import copy
-
 import networkx as nx
 from database.DAO import DAO
 
@@ -7,138 +5,78 @@ from database.DAO import DAO
 class Model:
     def __init__(self):
 
-        self._grafo = nx.DiGraph()
+        self._grafo = nx.Graph()
         self._nodes = []
 
-        self._piloti = DAO.getAllPilots()
-        self._mapIdPiloti = {}
-        for p in self._piloti:
-            self._mapIdPiloti[p.driverId] = p
+        self._genes = DAO.getAllGenes()
+        self._idMapGenes = {}
+        for g in self._genes:
+            self._idMapGenes[g.GeneID] = g
 
-        self.bestPath = []
-        self.bestTassoSconfitta = 100000
+        self._interaction = DAO.getAllInteraction()
+        self._idMapInteraction = {}
+        for i in self._interaction:
+            self._idMapInteraction[i.GeneID1, i.GeneID2] = i
 
-    # --------------------------------------------------------------------------------------------------------------------------------------------
-    def getAllAnni(self):
-        return DAO.getAllAnni()
+    def getMapGenes(self):
+        return self._idMapGenes
 
-    def getIdMap(self):
-        return self._mapIdPiloti
+    def getMapInteraction(self):
+        return self._idMapInteraction
 
-    # --------------------------------------------------------------------------------------------------------------------------------------------
-    def buildGraph(self, anno):
+    def getAllNodes(self):
+        return DAO.getAllNodes(self._idMapGenes)
+
+    def buildGraph(self):
 
         self._grafo.clear()
-        self._nodes = DAO.getAllNodes(anno, self._mapIdPiloti)
+        self._nodes = DAO.getAllNodes(self._idMapGenes)
         self._grafo.add_nodes_from(self._nodes)
 
-        for tupla in DAO.getAllEdgesWeigh(anno, self._mapIdPiloti):
-            d1 = tupla[0]
-            d2 = tupla[1]
-            peso = tupla[2]
-            if d1 in self._nodes and d2 in self._nodes and peso > 0:
-                self._grafo.add_edge(d1, d2, weight=peso)
+        for i in self._interaction:
+            idGene1 = i.GeneID1
+            idGene2 = i.GeneID2
 
-        return self._grafo
+            # Controllo di esistenza
+            if idGene1 not in self._idMapGenes or idGene2 not in self._idMapGenes:
+                print(f"ATTENZIONE: Gene mancante nell'idMapGenes: {idGene1} o {idGene2}")
+                continue
+
+            # Salta i cappi
+            if idGene1 == idGene2:
+                continue
+
+            gene1 = self._idMapGenes[idGene1]
+            gene2 = self._idMapGenes[idGene2]
+            if gene1 in self._grafo.nodes and gene2 in self._grafo.nodes:
+                if not self._grafo.has_edge(gene1, gene2):
+                    if gene1.Chromosome == gene2.Chromosome:
+                        peso = 2*abs(i.Expression_Corr)
+                    else:
+                        peso = abs(i.Expression_Corr)
+                    self._grafo.add_edge(gene1, gene2, weight=peso)
 
     def getDetailsGraph(self):
         return len(self._grafo.nodes), len(self._grafo.edges)
 
-    # --------------------------------------------------------------------------------------------------------------------------------------------
-    def getBestScore(self):
+    def getAdiacenti(self, idnodo):
 
-        bestScore=0
-        bestPilota = None
+        gene = self._idMapGenes[idnodo]
+        lista=[]
 
-        for nodo in self._grafo.nodes():
-            pesoVittorie = 0
-            pesoSconfitte = 0
+        for vicino in self._grafo.neighbors(gene):
+            lista.append( (vicino, self._grafo[gene][vicino]["weight"] ) )
 
-            for succ in self._grafo.successors(nodo):
-                pesoVittorie += self._grafo[nodo][succ]["weight"]
-            for pre in self._grafo.predecessors(nodo):
-                pesoSconfitte += self._grafo[pre][nodo]["weight"]
-
-            score = pesoVittorie - pesoSconfitte
-            if score > bestScore:
-                bestScore = score
-                bestPilota = nodo.surname
-
-        return bestPilota, bestScore
-
-    # --------------------------------------------------------------------------------------------------------------------------------------------
-    def getDreamTeam(self, numPiloti):
-
-        self.bestPath = []
-        self.bestTassoSconfitta = 100000
-        parziale = []
-        self._ricorsione(parziale, numPiloti)
-        return self.bestPath, self.bestTassoSconfitta
-
-        #ATTENZIONE --> con il metodo sotto ottieni delle permutazioni ("A","B" diverso da "B","A")
-        #           --> fai delle combinazioni direttamente nella ricorsione
-        # for node in self._nodes:
-        #     parziale.append(node)
-        #     self._ricorsione( parziale, numPiloti)
-        #     parziale.pop()
-
-    # --------------------------------------------------------------------------------------------------------------------------------------------
-    def _ricorsione(self, parziale, numPiloti):
-
-        #è ammissibile?
-        if len(parziale) == numPiloti:
-            #è la migliore?
-            print(f"Testing team")
-            tasso = self.calcolaTassoSconfitta(parziale)
-            if tasso < self.bestTassoSconfitta:
-                print(f"Soluzione migliore trovata")
-                self.bestTassoSconfitta = tasso
-                self.bestPath = copy.deepcopy(parziale)
-            return
-
-        else:
-            #continua a cercare altre opzioni
-            for node in self._nodes:
-                if node not in parziale:
-                    print(f"Ricorsione: {parziale}")
-                    parziale.append(node)
-                    self._ricorsione(parziale, numPiloti)
-                    parziale.pop()
-
-    # --------------------------------------------------------------------------------------------------------------------------------------------
-    def calcolaTassoSconfitta(self, listaNodi):
-
-        print("called funzione tasso")
-        #2 --> archi
-        tasso=0
-        for edge in self._grafo.edges( data=True):
-            if edge[0] not in listaNodi and edge[1] in listaNodi: #arco( noTeam-Team) = vittoria
-                tasso += self._grafo[edge[2]]["weight"]
-        return tasso
-
-        #2 --> NODO
-        # tasso=0
-        # for n in self._nodes:
-        #     for p in listaNodi:
-        #         if n not in listaNodi:
-        #             if self._grafo.has_edge(n, p):
-        #                 tasso += self._grafo[n][p]["weight"] #arco escluso--team: vittoria
-        # return tasso
-
-
-
-    #modo 2:
-    # def getScore(self, team):
-    #     score = 0
-    #     for e in self._graph.edges(data=True):
-    #         if e[0] not in team and e[1] in team:
-    #             score += e[2]["weight"]
-    #     return score
+        lista.sort( key = lambda x: x[1], reverse=True )
+        return lista
 
 
 if __name__ == "__main__":
     m = Model()
-    mappa = m.getIdMap()
-    m.buildGraph(1951)
-    print( f"aaaa: {mappa.get(498)} ")
-    print( m.getDetailsGraph() )
+    m.buildGraph()
+    print(m.getDetailsGraph())
+    print(m.getAdiacenti("G234194"))
+    # print("AAAAAA")
+    # print(m.getMapGenes())
+    # print("BBBBBBB")
+    # print(m.getMapInteraction())

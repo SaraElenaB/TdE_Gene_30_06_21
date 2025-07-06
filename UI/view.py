@@ -6,45 +6,31 @@ class View(ft.UserControl):
         super().__init__()
         # page stuff
         self._page = page
-        self._page.title = "TdP Lab 13 - simulazione esame"
+        self._page.title = "Template application using MVC and DAO"
         self._page.horizontal_alignment = 'CENTER'
         self._page.theme_mode = ft.ThemeMode.LIGHT
-        self._page.bgcolor = "#ebf4f4"
-        self._page.window_height = 800
-        page.window_center()
         # controller (it is not initialized. Must be initialized in the main, after the controller is created)
         self._controller = None
         # graphical elements
         self._title = None
-        self._txt_name = None
-        self._txt_result = None
+
 
     def load_interface(self):
         # title
-        self._title = ft.Text("TdP Lab 13 - simulazione esame", color="blue", size=24)
+        self._title = ft.Text("TdP 2024 - Esami 1/6/21", color="gray", size=24)
         self._page.controls.append(self._title)
+        self.btnCreaGrafo = ft.ElevatedButton(text="Crea Grafo", width=500, on_click=self._controller.handleCreaGrafo)
+        row1 = ft.Row(controls=[self.btnCreaGrafo], alignment=ft.MainAxisAlignment.CENTER)
+        self._page.add(row1)
+        self.ddGene = ft.Dropdown(label="Gene", width=300)
+        self.btnGeniAdiacenti = ft.ElevatedButton(text="Geni Adiacenti", width=200, on_click=self._controller.handleGeniAdiacenti)
+        row2 = ft.Row([self.ddGene, self.btnGeniAdiacenti], alignment=ft.MainAxisAlignment.CENTER)
+        self._page.add(row2)
 
-        self._ddAnno = ft.Dropdown(label="Anno")
-        self._controller.fillDDYear()
-        self._btnCreaGrafo = ft.ElevatedButton(text="Vittorie Piloti", on_click=self._controller.handleCreaGrafo)
 
-        cont = ft.Container(self._ddAnno, width=250, alignment=ft.alignment.top_left)
-        row1 = ft.Row([cont, self._btnCreaGrafo], alignment=ft.MainAxisAlignment.CENTER,
-                      vertical_alignment=ft.CrossAxisAlignment.END)
-
-        self._txtIntK = ft.TextField(label="Dimensione K")
-        self._btnCerca = ft.ElevatedButton(text="Cerca Dream Team",
-                                           on_click=self._controller.handleCerca)
-        row2 = ft.Row([ft.Container(self._txtIntK, width=250),
-            ft.Container(self._btnCerca, width=250)
-        ], alignment=ft.MainAxisAlignment.CENTER)
-
-        self._page.controls.append(row1)
-        self._page.controls.append(row2)
-        self.txt_result = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
-        self._page.controls.append(self.txt_result)
+        self.txtOut = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        self._page.controls.append(self.txtOut)
         self._page.update()
-
 
     @property
     def controller(self):
@@ -56,6 +42,12 @@ class View(ft.UserControl):
 
     def set_controller(self, controller):
         self._controller = controller
+
+    def create_alert(self, message):
+        dlg = ft.AlertDialog(title=ft.Text(message))
+        self._page.dialog = dlg
+        dlg.open = True
+        self._page.update()
 
     def update_page(self):
         self._page.update()
